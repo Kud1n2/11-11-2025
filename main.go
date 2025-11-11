@@ -1,6 +1,7 @@
 package main
 
 import (
+	"net"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -11,40 +12,53 @@ type URLrequest struct {
 }
 
 type URLresponse struct {
-	URL    string `json:"url"`
-	Status string `json:"status"`
+	Links     map[string]string `json:"links"`
+	Links_num int               `json:"links_num"`
+}
+
+type ListsRequest struct {
+	Links_list []int `json:"links_list"`
 }
 
 var URLrequests []URLrequest
+var URLresponses []URLresponse
+var ListsRequests []ListsRequest
 
 func addURL(context *gin.Context) {
 	var request URLrequest
+	if err := context.BindJSON(&request); err == nil {
+		URLrequests = append(URLrequests, request)
+		CheckAvailable()
+		context.IndentedJSON(http.StatusOK, URLresponses[len(URLresponses)-1])
+	} else {
+		var request ListsRequest
 
-	if err := context.BindJSON(&request); err != nil {
-		return
+		if err := context.BindJSON(&request); err != nil {
+			return
+		}
+		ListsRequests = append(ListsRequests, request)
+		context.IndentedJSON(http.StatusOK, ListsRequests)
 	}
-	URLrequests = append(URLrequests, request)
-	CheckAvailable()
-	context.IndentedJSON(http.StatusOK, URLrequests)
-
 }
+
 func getURLs(context *gin.Context) {
 	context.IndentedJSON(http.StatusOK, URLresponses)
 }
 
-var URLresponses []URLresponse
-
 func CheckAvailable() {
+	dict := make(map[string]string)
 	if len(URLrequests) > 0 {
 		used := URLrequests[len(URLrequests)-1]
 		for i := 0; i < len(used.Links); i++ {
-			_, err := http.Get(used.Links[i])
+			_, err := net.Dial("tcp", used.Links[i]+":http")
 			if err != nil {
-				URLresponses = append(URLresponses, URLresponse{URL: used.Links[i], Status: "not available"})
+				dict[used.Links[i]] = "not available"
 			} else {
-				URLresponses = append(URLresponses, URLresponse{URL: used.Links[i], Status: "available"})
+				dict[used.Links[i]] = "available"
 			}
+
 		}
+		URLresponses = append(URLresponses, URLresponse{Links: dict, Links_num: len(URLrequests)})
 	}
 }
 
@@ -52,6 +66,7 @@ func main() {
 	router := gin.Default()
 	router.POST("/webservice", addURL)
 	router.GET("/webservice", getURLs)
+	// router.GET("/webservice", getPDF)
 
 	router.Run("localhost:1010")
 }
