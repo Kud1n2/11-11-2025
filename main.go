@@ -6,6 +6,7 @@ import (
 
 func main() {
 	router := gin.Default()
+	URLresponses = makeURLresponses()
 	router.POST("/webservice", handlerRequest)
 	router.GET("/webservice", getURLs)
 

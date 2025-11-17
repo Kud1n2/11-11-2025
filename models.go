@@ -1,5 +1,11 @@
 package main
 
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+)
+
 type URLrequest struct {
 	Links []string `json:"links"`
 }
@@ -14,5 +20,19 @@ type ListsRequest struct {
 }
 
 var URLrequests []URLrequest
-var URLresponses []URLresponse
 var ListsRequests []ListsRequest
+var URLresponses []URLresponse
+
+func makeURLresponses() []URLresponse {
+	file, err := os.ReadFile("log.json")
+	var URLresponses []URLresponse
+	if err != nil {
+		URLresponses = []URLresponse{}
+	} else {
+		err = json.Unmarshal(file, &URLresponses)
+		if err != nil {
+			fmt.Println("Ошибка чтения")
+		}
+	}
+	return URLresponses
+}
